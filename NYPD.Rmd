@@ -1,0 +1,77 @@
+---
+title: "NYPD"
+date: "2023-09-02"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Source
+
+This data was sourced from https://catalog.data.gov/dataset. This dataset is published and maintained by the city of New York. </br>
+The data contains information on the victim and purpertators demographic information, the location, date, and time of the crime, and a category describing the crime. Using this information, we can evaluate the patterns found in the demographic information that is available.
+
+```{r dataSource}
+library(tidyverse)
+RawData <- read_csv("./data/NYPD_Shooting_Incident_Data__Historic_.csv")
+```
+
+# Tidy and Transform
+Upon import, the date column needed to be updated from a string to a date. The following columns were removed as they were redundant with other columns in the dataset.</br>
+Lon_Lat</br>
+X_COORD_CD</br>
+Y_COORD_CD</br>
+</br>
+The age group and race fields contain extreme outliers and multiple denotations for unknown data. In both of these instances, I cleaned the data so all of the nulls show as 'NA' in the dataset.
+
+```{r tidyAndTransform}
+Data <- RawData %>% mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+Data <- subset(Data,select=-c(Lon_Lat,X_COORD_CD,Y_COORD_CD))
+Data$PERP_AGE_GROUP[(Data$PERP_AGE_GROUP == "(null)")] <- NA
+Data$PERP_AGE_GROUP[(Data$PERP_AGE_GROUP == 1020)] <- NA
+Data$PERP_AGE_GROUP[(Data$PERP_AGE_GROUP == "UNKNOWN")] <- NA
+Data$PERP_AGE_GROUP[(Data$PERP_AGE_GROUP == 940)] <- NA
+Data$PERP_RACE[(Data$PERP_RACE == "(null)")] <- NA
+Data$PERP_RACE[(Data$PERP_RACE == "UNKNOWN")] <- NA
+Data$VIC_AGE_GROUP[(Data$VIC_AGE_GROUP == "UNKNOWN")] <- NA
+Data$VIC_AGE_GROUP[(Data$VIC_AGE_GROUP == 1022)] <- NA
+```
+
+# Demographics Of Perpatrator and Victim
+Using the provided information, we can identify the most common races and age groups associated with various crimes. 
+
+## Perpatrator Demographics
+```{r plots}
+ggplot(Data, aes(y = PERP_RACE, x = PERP_AGE_GROUP, color = STATISTICAL_MURDER_FLAG)) + geom_count()+guides(x = guide_axis(n.dodge = 2))
+```
+</br>
+</br>
+
+## Victim Demographics
+
+```{r plots1}
+ggplot(Data, aes(y = VIC_RACE, x = VIC_AGE_GROUP, color = STATISTICAL_MURDER_FLAG)) + geom_count()+guides(x = guide_axis(n.dodge = 2))
+```
+</br>
+</br>
+Looking at the 2 graphs above, we can see there is no major distinction for the Age or Race of the perpetrator that shows the likelihood of a murder. When looking at the victim graph, we can see that a black person aged 18 - 44 has a much higher likelihood of dieing when involved with criminal activity.
+</br>
+</br>
+
+## Murder Victim Race by Location
+
+```{r plots2}
+ggplot(filter(Data, STATISTICAL_MURDER_FLAG == TRUE), aes(x=Longitude, y=Latitude, color = VIC_RACE))+geom_point()
+```
+
+</br>
+When mapping out the locations of the murders by victims race, we can see that the distribution of murders have some fairly dense areas, but shows a lot of diversity across the map.
+</br>
+</br>
+
+# Biases
+Looking at the map and the victim demographic information. It becomes clear that there are certain groups that receive more hostility and are treated more violently. I was expecting the races to be much more concentrated in the city. It was shown there was diversity across the city when it comes to being a murder victim.
